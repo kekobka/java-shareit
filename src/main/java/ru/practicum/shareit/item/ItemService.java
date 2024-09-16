@@ -1,6 +1,7 @@
 package ru.practicum.shareit.item;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.dto.ItemMapper;
@@ -14,6 +15,7 @@ import ru.practicum.shareit.user.UserService;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ItemService {
@@ -22,6 +24,7 @@ public class ItemService {
     private long id = 0;
 
     public Item create(ItemDto itemDto, long userId) {
+        log.info("POST /items");
         User user = userService.getById(userId);
 
         Item item = ItemMapper.dtoToItem(itemDto);
@@ -33,6 +36,8 @@ public class ItemService {
     }
 
     public Item update(long itemId, UpdateItemDto itemDto, long userId) {
+        log.info("PATCH /items/{}", itemId);
+
         Item item = itemRepository.getById(itemId)
                 .orElseThrow(() -> new ItemNotFoundException("Id: " + itemId));
 
@@ -57,16 +62,22 @@ public class ItemService {
     }
 
     public Item getById(long itemId) {
+        log.info("GET /items/{}", itemId);
+
         return itemRepository.getById(itemId)
                 .orElseThrow(() -> new ItemNotFoundException("Id: " + itemId));
     }
 
     public List<ItemDto> allItemsFromUser(long userId) {
+        log.info("GET /items HEADER -> {}", userId);
+
         userService.getById(userId);
         return itemRepository.getUserItems(userId);
     }
 
     public List<ItemDto> search(String text) {
+        log.info("GET /items PARAMS -> {}", text);
+
         return itemRepository.search(text);
     }
 
