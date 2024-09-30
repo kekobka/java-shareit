@@ -20,6 +20,7 @@ public class Item {
 
     private String name;
     private String description;
+
     @Column(name = "is_available")
     private Boolean available;
 

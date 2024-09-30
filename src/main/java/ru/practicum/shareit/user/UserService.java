@@ -4,6 +4,7 @@ package ru.practicum.shareit.user;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.user.dto.UserDto;
 import ru.practicum.shareit.user.dto.UserMapper;
 import ru.practicum.shareit.user.exception.UserNotFoundException;
@@ -16,10 +17,11 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class UserService {
     private final UserRepository userRepository;
 
-
+    @Transactional
     public User create(UserDto user) {
         log.info("POST /users");
 
@@ -39,6 +41,7 @@ public class UserService {
         return userRepository.findAll();
     }
 
+    @Transactional
     public User update(Long userId, Map<String, Object> params) {
         log.info("PATCH /users/{}", userId);
 
@@ -59,6 +62,7 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    @Transactional
     public void deleteById(long userId) {
         log.info("DELETE /users/{}", userId);
 

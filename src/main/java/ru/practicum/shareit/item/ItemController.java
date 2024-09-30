@@ -3,6 +3,7 @@ package ru.practicum.shareit.item;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import ru.practicum.shareit.comment.CommentMapper;
 import ru.practicum.shareit.comment.dto.CommentDto;
 import ru.practicum.shareit.comment.model.Comment;
 import ru.practicum.shareit.item.dto.ItemBookingDto;
@@ -11,6 +12,7 @@ import ru.practicum.shareit.item.dto.ItemMapper;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequiredArgsConstructor
@@ -39,7 +41,7 @@ public class ItemController {
     @PostMapping("/{itemId}/comment")
     public CommentDto comment(@PathVariable Long itemId,
                               @RequestHeader(HEADER) Long userId, @RequestBody Comment comment) {
-        return itemService.comment(itemId, userId, comment);
+        return CommentMapper.commentToDto(itemService.comment(itemId, userId, comment));
     }
 
     @GetMapping
@@ -49,6 +51,9 @@ public class ItemController {
 
     @GetMapping("search")
     public List<ItemDto> search(@RequestParam String text) {
-        return itemService.search(text);
+        return itemService.search(text)
+                .stream()
+                .map(ItemMapper::itemToDto)
+                .collect(Collectors.toList());
     }
 }

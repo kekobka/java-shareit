@@ -4,13 +4,16 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.booking.dto.BookingDto;
+import ru.practicum.shareit.booking.exception.BookingNotFoundException;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.repository.BookingRepository;
+import ru.practicum.shareit.exception.AvailabilityException;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.exception.StatusException;
-import ru.practicum.shareit.exception.UnSupportedStateException;
+import ru.practicum.shareit.item.exception.AccessDeniedException;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.ItemRepository;
+import ru.practicum.shareit.user.exception.UserNotFoundException;
 import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
 
@@ -31,44 +34,43 @@ public class BookingService {
     public Booking getById(Long id, Long userId) {
         findUserById(userId);
         Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Не найдено брони с ID = " + id));
+                .orElseThrow(() -> new NotFoundException("Id: " + id));
         if (!Objects.equals(booking.getBooker().getId(), userId) && !Objects.equals(booking.getItem().getOwner().getId(), userId)) {
-            throw new NotFoundException("У вас не найдено такой брони или предмета.");
+            throw new NotFoundException("Id: " + id);
         }
         return booking;
     }
 
-    public List<Booking> getByUser(Long userId, String state) {
+    public List<Booking> getByUser(Long userId, BookingState state) {
         findUserById(userId);
         LocalDateTime now = LocalDateTime.ofInstant(Instant.now(), ZoneId.systemDefault());
-        return switch (state.toUpperCase()) {
-            case "CURRENT" -> bookingRepository
+        return switch (state) {
+            case BookingState.CURRENT -> bookingRepository
                     .findAllByBookerIdAndStartLessThanEqualAndEndGreaterThanEqualOrderByStartDesc(userId, now, now);
-            case "PAST" -> bookingRepository.findAllByBookerIdAndEndBeforeOrderByStartDesc(userId, now);
-            case "FUTURE" -> bookingRepository.findAllByBookerIdAndStartAfterOrderByStartDesc(userId, now);
-            case "WAITING" ->
+            case BookingState.PAST -> bookingRepository.findAllByBookerIdAndEndBeforeOrderByStartDesc(userId, now);
+            case BookingState.FUTURE -> bookingRepository.findAllByBookerIdAndStartAfterOrderByStartDesc(userId, now);
+            case BookingState.WAITING ->
                     bookingRepository.findAllByBookerIdAndStatusOrderByStartDesc(userId, BookingStatus.valueOf("WAITING"));
-            case "REJECTED" ->
+            case BookingState.REJECTED ->
                     bookingRepository.findAllByBookerIdAndStatusOrderByStartDesc(userId, BookingStatus.valueOf("REJECTED"));
-            case "ALL" -> bookingRepository.findAllByBookerIdOrderByStartDesc(userId);
-            default -> throw new UnSupportedStateException("Unknown state: " + state);
+            case BookingState.ALL -> bookingRepository.findAllByBookerIdOrderByStartDesc(userId);
         };
     }
 
-    public List<Booking> getByOwner(Long userId, String state) {
+    public List<Booking> getByOwner(Long userId, BookingState state) {
         findUserById(userId);
         LocalDateTime now = LocalDateTime.ofInstant(Instant.now(), ZoneId.systemDefault());
-        return switch (state.toUpperCase()) {
-            case "CURRENT" -> bookingRepository
+        return switch (state) {
+            case BookingState.CURRENT -> bookingRepository
                     .findAllByItemOwnerIdAndStartLessThanEqualAndEndGreaterThanEqualOrderByStartDesc(userId, now, now);
-            case "PAST" -> bookingRepository.findAllByItemOwnerIdAndEndBeforeOrderByStartDesc(userId, now);
-            case "FUTURE" -> bookingRepository.findAllByItemOwnerIdAndStartAfterOrderByStartDesc(userId, now);
-            case "WAITING" ->
+            case BookingState.PAST -> bookingRepository.findAllByItemOwnerIdAndEndBeforeOrderByStartDesc(userId, now);
+            case BookingState.FUTURE ->
+                    bookingRepository.findAllByItemOwnerIdAndStartAfterOrderByStartDesc(userId, now);
+            case BookingState.WAITING ->
                     bookingRepository.findAllByItemOwnerIdAndStatusOrderByStartDesc(userId, BookingStatus.valueOf("WAITING"));
-            case "REJECTED" ->
+            case BookingState.REJECTED ->
                     bookingRepository.findAllByItemOwnerIdAndStatusOrderByStartDesc(userId, BookingStatus.valueOf("REJECTED"));
-            case "ALL" -> bookingRepository.findAllByItemOwnerIdOrderByStartDesc(userId);
-            default -> throw new UnSupportedStateException("Unknown state: " + state);
+            case BookingState.ALL -> bookingRepository.findAllByItemOwnerIdOrderByStartDesc(userId);
         };
     }
 
@@ -76,11 +78,16 @@ public class BookingService {
     public Booking create(BookingDto booking, Long userId) {
         booking.setBookerId(userId);
         Item item = itemRepository.findById(booking.getItemId())
-                .orElseThrow(() -> new NotFoundException("Не найдено предмета с ID = " + booking.getItemId()));
+                .orElseThrow(() -> new BookingNotFoundException("Id: " + booking.getItemId()));
+
+        if (!item.getAvailable()) {
+            throw new AvailabilityException("This item cannot be booked");
+        }
+
         User user = findUserById(booking.getBookerId());
 
         if (Objects.equals(item.getOwner().getId(), userId)) {
-            throw new NotFoundException("У вас не найдено такой брони.");
+            throw new NotFoundException("Id: " + booking.getItemId());
         }
         booking.setStatus(BookingStatus.WAITING);
         return bookingRepository.save(BookingMapper.dtoToBooking(booking, user, item));
@@ -88,14 +95,18 @@ public class BookingService {
 
     @Transactional
     public Booking approve(Long id, boolean approved, Long userId) {
-        findUserById(userId);
+
+        userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("id: " + userId));
+
         Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Не найдено брони с ID = " + id));
+                .orElseThrow(() -> new NotFoundException("Id: " + id));
+
         if (!Objects.equals(booking.getItem().getOwner().getId(), userId)) {
-            throw new NotFoundException("Вы не являетесь владельцем данного предмета!");
+            throw new AccessDeniedException("You are not the owner of this item");
         }
         if (booking.getStatus() == BookingStatus.APPROVED) {
-            throw new StatusException("Нельзя подтвердить бронь, которая уже подтверждена.");
+            throw new StatusException("It is not possible to confirm a reservation that has already been confirmed.");
         }
         booking.setStatus(approved ? BookingStatus.APPROVED : BookingStatus.REJECTED);
         return bookingRepository.save(booking);
@@ -103,6 +114,6 @@ public class BookingService {
 
     private User findUserById(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("Не найдено пользователя с id: " + userId));
+                .orElseThrow(() -> new UserNotFoundException("id: " + userId));
     }
 }

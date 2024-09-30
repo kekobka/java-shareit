@@ -1,12 +1,12 @@
 package ru.practicum.shareit.comment;
 
-import org.springframework.stereotype.Component;
+import lombok.experimental.UtilityClass;
 import ru.practicum.shareit.comment.dto.CommentDto;
 import ru.practicum.shareit.comment.model.Comment;
 
-@Component
+@UtilityClass
 public class CommentMapper {
-    public CommentDto toCommentDto(Comment comment) {
+    public static CommentDto commentToDto(Comment comment) {
         return new CommentDto(
                 comment.getId(),
                 comment.getText(),

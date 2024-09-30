@@ -1,9 +1,10 @@
 package ru.practicum.shareit.item;
 
-import jakarta.transaction.Transactional;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.booking.BookingMapper;
 import ru.practicum.shareit.booking.dto.BookingDto;
 import ru.practicum.shareit.booking.model.Booking;
@@ -33,13 +34,14 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ItemService {
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
     private final BookingRepository bookingRepository;
     private final CommentRepository commentRepository;
-    private final CommentMapper commentMapper;
 
+    @Transactional
     public Item create(ItemDto itemDto, long userId) {
         log.info("POST /items");
 
@@ -48,8 +50,9 @@ public class ItemService {
         return itemRepository.save(item);
     }
 
+    @Transactional
     public Item update(Long itemId, Long userId, Map<String, Object> request) {
-        log.info("PATCH /items/{}", itemId);
+        log.info("PATCH /items/{}", request);
 
         Item item = findItemById(itemId);
 
@@ -85,13 +88,13 @@ public class ItemService {
                 .bookingToDto(upcomingBookings.getFirst());
 
         List<CommentDto> comments = commentRepository.findAllByItemId(id).stream()
-                .map(commentMapper::toCommentDto).collect(Collectors.toList());
+                .map(CommentMapper::commentToDto).collect(Collectors.toList());
 
         return ItemMapper.toItemBookingDto(findItemById(id), lastBooking, nextBooking, userId, comments);
     }
 
     @Transactional
-    public CommentDto comment(Long itemId, Long userId, Comment comment) {
+    public Comment comment(Long itemId, Long userId, Comment comment) {
         Item item = findItemById(itemId);
         User user = findUserById(userId);
         List<Booking> endedBookings = bookingRepository.findLastBookingsByItemId(itemId);
@@ -101,8 +104,7 @@ public class ItemService {
         }
         for (Booking booking : endedBookings) {
             if (booking.getBooker().getId() == userId) {
-                return commentMapper.toCommentDto(
-                        commentRepository.save(new Comment(0L, text, item, user, LocalDateTime.now())));
+                return commentRepository.save(new Comment(0L, text, item, user, LocalDateTime.now()));
             }
         }
         throw new CommentException("You cannot leave a review on this subject");
@@ -112,19 +114,16 @@ public class ItemService {
     public List<ItemBookingDto> allItemsFromUser(long userId) {
         log.info("GET /items HEADER -> {}", userId);
 
-        return itemRepository.findByUserId(userId).stream()
+        return itemRepository.findAllByOwnerId(userId).stream()
                 .map(item -> getById(item.getId(), userId))
                 .collect(Collectors.toList());
     }
 
-    public List<ItemDto> search(String text) {
+    public List<Item> search(String text) {
         log.info("GET /items PARAMS -> {}", text);
 
         if (text.isEmpty()) return Collections.emptyList();
-        return itemRepository.search(text)
-                .stream()
-                .map(ItemMapper::itemToDto)
-                .collect(Collectors.toList());
+        return itemRepository.searchAllByTextInNameOrDescription(text);
     }
 
     private User findUserById(Long userId) {
