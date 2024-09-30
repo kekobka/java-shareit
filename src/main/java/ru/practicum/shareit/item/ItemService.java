@@ -1,87 +1,139 @@
 package ru.practicum.shareit.item;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import ru.practicum.shareit.booking.BookingMapper;
+import ru.practicum.shareit.booking.dto.BookingDto;
+import ru.practicum.shareit.booking.model.Booking;
+import ru.practicum.shareit.booking.repository.BookingRepository;
+import ru.practicum.shareit.comment.CommentMapper;
+import ru.practicum.shareit.comment.dto.CommentDto;
+import ru.practicum.shareit.comment.model.Comment;
+import ru.practicum.shareit.comment.repository.CommentRepository;
+import ru.practicum.shareit.exception.CommentException;
+import ru.practicum.shareit.item.dto.ItemBookingDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.dto.ItemMapper;
-import ru.practicum.shareit.item.dto.UpdateItemDto;
 import ru.practicum.shareit.item.exception.AccessDeniedException;
 import ru.practicum.shareit.item.exception.ItemNotFoundException;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.ItemRepository;
-import ru.practicum.shareit.user.User;
-import ru.practicum.shareit.user.UserService;
+import ru.practicum.shareit.user.exception.UserNotFoundException;
+import ru.practicum.shareit.user.model.User;
+import ru.practicum.shareit.user.repository.UserRepository;
 
+import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ItemService {
-    private final UserService userService;
     private final ItemRepository itemRepository;
-    private long id = 0;
+    private final UserRepository userRepository;
+    private final BookingRepository bookingRepository;
+    private final CommentRepository commentRepository;
+    private final CommentMapper commentMapper;
 
     public Item create(ItemDto itemDto, long userId) {
         log.info("POST /items");
-        User user = userService.getById(userId);
 
-        Item item = ItemMapper.dtoToItem(itemDto);
-        item.setId(generateId());
-        item.setOwner(user);
-
-        itemRepository.create(item);
-        return item;
+        User user = findUserById(userId);
+        Item item = ItemMapper.dtoToItem(itemDto, user);
+        return itemRepository.save(item);
     }
 
-    public Item update(long itemId, UpdateItemDto itemDto, long userId) {
+    public Item update(Long itemId, Long userId, Map<String, Object> request) {
         log.info("PATCH /items/{}", itemId);
 
-        Item item = itemRepository.getById(itemId)
-                .orElseThrow(() -> new ItemNotFoundException("Id: " + itemId));
+        Item item = findItemById(itemId);
 
         if (item.getOwner().getId() != userId) {
-            throw new AccessDeniedException("You didn't create this item");
+            throw new AccessDeniedException("You cannot update this item");
         }
 
-        updateItemDetails(item, itemDto);
-        return itemRepository.update(itemId, item);
+        request.forEach((key, value) -> {
+            switch (key) {
+                case "name":
+                    item.setName((String) value);
+                    break;
+                case "description":
+                    item.setDescription((String) value);
+                    break;
+                case "available":
+                    item.setAvailable((boolean) value);
+                    break;
+            }
+        });
+
+
+        return itemRepository.save(item);
     }
 
-    private void updateItemDetails(Item item, UpdateItemDto itemDto) {
-        if (itemDto.getName() != null) {
-            item.setName(itemDto.getName());
-        }
-        if (itemDto.getDescription() != null) {
-            item.setDescription(itemDto.getDescription());
-        }
-        if (itemDto.getAvailable() != null) {
-            item.setAvailable(itemDto.getAvailable());
-        }
+    public ItemBookingDto getById(Long id, Long userId) {
+        List<Booking> lastBookings = bookingRepository.findLastBookingsByItemId(id);
+        BookingDto lastBooking = lastBookings.isEmpty() ? null : BookingMapper
+                .BookingToDto(lastBookings.getFirst());
+
+        List<Booking> upcomingBookings = bookingRepository.findUpcomingBookingsByItemId(id);
+        BookingDto nextBooking = upcomingBookings.isEmpty() ? null : BookingMapper
+                .BookingToDto(upcomingBookings.getFirst());
+
+        List<CommentDto> comments = commentRepository.findAllByItemId(id).stream()
+                .map(commentMapper::toCommentDto).collect(Collectors.toList());
+
+        return ItemMapper.toItemBookingDto(findItemById(id), lastBooking, nextBooking, userId, comments);
     }
 
-    public Item getById(long itemId) {
-        log.info("GET /items/{}", itemId);
-
-        return itemRepository.getById(itemId)
-                .orElseThrow(() -> new ItemNotFoundException("Id: " + itemId));
+    @Transactional
+    public CommentDto comment(Long itemId, Long userId, Comment comment) {
+        Item item = findItemById(itemId);
+        User user = findUserById(userId);
+        List<Booking> endedBookings = bookingRepository.findLastBookingsByItemId(itemId);
+        String text = comment.getText();
+        if (text == null || text.isEmpty()) {
+            throw new CommentException("Cannot be empty");
+        }
+        for (Booking booking : endedBookings) {
+            if (booking.getBooker().getId() == userId) {
+                return commentMapper.toCommentDto(
+                        commentRepository.save(new Comment(0L, text, item, user, LocalDateTime.now())));
+            }
+        }
+        throw new CommentException("You cannot leave a review on this subject");
     }
 
-    public List<ItemDto> allItemsFromUser(long userId) {
+
+    public List<ItemBookingDto> allItemsFromUser(long userId) {
         log.info("GET /items HEADER -> {}", userId);
 
-        userService.getById(userId);
-        return itemRepository.getUserItems(userId);
+        return itemRepository.findByUserId(userId).stream()
+                .map(item -> getById(item.getId(), userId))
+                .collect(Collectors.toList());
     }
 
     public List<ItemDto> search(String text) {
         log.info("GET /items PARAMS -> {}", text);
 
-        return itemRepository.search(text);
+        if (text.isEmpty()) return Collections.emptyList();
+        return itemRepository.search(text)
+                .stream()
+                .map(ItemMapper::itemToDto)
+                .collect(Collectors.toList());
     }
 
-    private long generateId() {
-        return ++id;
+    private User findUserById(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Id: " + userId));
+    }
+
+    private Item findItemById(Long itemId) {
+        return itemRepository.findById(itemId)
+                .orElseThrow(() -> new ItemNotFoundException("Id: " + itemId));
     }
 }

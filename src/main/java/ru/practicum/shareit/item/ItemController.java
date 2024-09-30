@@ -3,11 +3,14 @@ package ru.practicum.shareit.item;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import ru.practicum.shareit.comment.dto.CommentDto;
+import ru.practicum.shareit.comment.model.Comment;
+import ru.practicum.shareit.item.dto.ItemBookingDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.dto.ItemMapper;
-import ru.practicum.shareit.item.dto.UpdateItemDto;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -23,19 +26,24 @@ public class ItemController {
     }
 
     @PatchMapping("{itemId}")
-    public ItemDto update(@PathVariable long itemId,
-                          @RequestBody @Valid  UpdateItemDto itemDto,
-                          @RequestHeader(HEADER) long userId) {
-        return ItemMapper.itemToDto(itemService.update(itemId, itemDto, userId));
+    public ItemDto update(@PathVariable Long itemId,
+                          @RequestHeader(HEADER) Long userId, @RequestBody Map<String, Object> params) {
+        return ItemMapper.itemToDto(itemService.update(itemId, userId, params));
     }
 
     @GetMapping("{itemId}")
-    public ItemDto getById(@PathVariable long itemId) {
-        return ItemMapper.itemToDto(itemService.getById(itemId));
+    public ItemBookingDto getById(@PathVariable Long itemId, @RequestHeader(HEADER) Long userId) {
+        return itemService.getById(itemId, userId);
+    }
+
+    @PostMapping("/{itemId}/comment")
+    public CommentDto comment(@PathVariable Long itemId,
+                              @RequestHeader(HEADER) Long userId, @RequestBody Comment comment) {
+        return itemService.comment(itemId, userId, comment);
     }
 
     @GetMapping
-    public List<ItemDto> allItemsFromUser(@RequestHeader(HEADER) long userId) {
+    public List<ItemBookingDto> allItemsFromUser(@RequestHeader(HEADER) long userId) {
         return itemService.allItemsFromUser(userId);
     }
 
