@@ -78,11 +78,11 @@ public class ItemService {
     public ItemBookingDto getById(Long id, Long userId) {
         List<Booking> lastBookings = bookingRepository.findLastBookingsByItemId(id);
         BookingDto lastBooking = lastBookings.isEmpty() ? null : BookingMapper
-                .BookingToDto(lastBookings.getFirst());
+                .bookingToDto(lastBookings.getFirst());
 
         List<Booking> upcomingBookings = bookingRepository.findUpcomingBookingsByItemId(id);
         BookingDto nextBooking = upcomingBookings.isEmpty() ? null : BookingMapper
-                .BookingToDto(upcomingBookings.getFirst());
+                .bookingToDto(upcomingBookings.getFirst());
 
         List<CommentDto> comments = commentRepository.findAllByItemId(id).stream()
                 .map(commentMapper::toCommentDto).collect(Collectors.toList());

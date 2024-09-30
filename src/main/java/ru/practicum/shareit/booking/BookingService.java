@@ -83,7 +83,7 @@ public class BookingService {
             throw new NotFoundException("У вас не найдено такой брони.");
         }
         booking.setStatus(BookingStatus.WAITING);
-        return bookingRepository.save(BookingMapper.DtoToBooking(booking, user, item));
+        return bookingRepository.save(BookingMapper.dtoToBooking(booking, user, item));
     }
 
     @Transactional
