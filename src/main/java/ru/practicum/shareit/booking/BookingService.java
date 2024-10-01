@@ -1,6 +1,7 @@
 package ru.practicum.shareit.booking;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.booking.dto.BookingDto;
@@ -23,6 +24,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
 
+@Slf4j
 @Service
 @Transactional(readOnly = true)
 @AllArgsConstructor
@@ -32,6 +34,8 @@ public class BookingService {
     private UserRepository userRepository;
 
     public Booking getById(Long id, Long userId) {
+        log.info("GET /bookings/{}", id);
+
         findUserById(userId);
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Id: " + id));
@@ -42,6 +46,8 @@ public class BookingService {
     }
 
     public List<Booking> getByUser(Long userId, BookingState state) {
+        log.info("GET /bookings");
+
         findUserById(userId);
         LocalDateTime now = LocalDateTime.ofInstant(Instant.now(), ZoneId.systemDefault());
         return switch (state) {
@@ -58,6 +64,8 @@ public class BookingService {
     }
 
     public List<Booking> getByOwner(Long userId, BookingState state) {
+        log.info("GET /bookings/owner");
+
         findUserById(userId);
         LocalDateTime now = LocalDateTime.ofInstant(Instant.now(), ZoneId.systemDefault());
         return switch (state) {
@@ -76,6 +84,8 @@ public class BookingService {
 
     @Transactional
     public Booking create(BookingDto booking, Long userId) {
+        log.info("POST /bookings -> {}", booking);
+
         booking.setBookerId(userId);
         Item item = itemRepository.findById(booking.getItemId())
                 .orElseThrow(() -> new BookingNotFoundException("Id: " + booking.getItemId()));
@@ -95,6 +105,7 @@ public class BookingService {
 
     @Transactional
     public Booking approve(Long id, boolean approved, Long userId) {
+        log.info("PATCH /bookings/{}", id);
 
         userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("id: " + userId));
