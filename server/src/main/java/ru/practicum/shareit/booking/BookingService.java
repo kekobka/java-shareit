@@ -104,7 +104,7 @@ public class BookingService {
     }
 
     @Transactional
-    public Booking approve(Long id, boolean approved, Long userId) {
+    public Booking approve(Long id, boolean approved, long userId) {
         log.info("PATCH /bookings/{}", id);
 
         userRepository.findById(userId)
@@ -113,7 +113,7 @@ public class BookingService {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Id: " + id));
 
-        if (!Objects.equals(booking.getItem().getOwner().getId(), userId)) {
+        if (booking.getItem().getOwner().getId() != userId) {
             throw new AccessDeniedException("You are not the owner of this item");
         }
         if (booking.getStatus() == BookingStatus.APPROVED) {
