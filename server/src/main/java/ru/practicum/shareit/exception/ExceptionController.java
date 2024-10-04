@@ -13,7 +13,7 @@ import ru.practicum.shareit.item.exception.AccessDeniedException;
 @Slf4j
 @RestControllerAdvice
 public class ExceptionController {
-    @ExceptionHandler({NotFoundException.class, BookingNotFoundException.class})
+    @ExceptionHandler({NotFoundException.class,AvailabilityException.class, BookingNotFoundException.class})
     public ResponseEntity<ErrorMessage> handleNotFound(NotFoundException exception) {
         log.error("ERROR", exception);
         return ResponseEntity
@@ -21,7 +21,7 @@ public class ExceptionController {
                 .body(new ErrorMessage(exception.getMessage()));
     }
 
-    @ExceptionHandler({MethodArgumentNotValidException.class, AvailabilityException.class,
+    @ExceptionHandler({MethodArgumentNotValidException.class,
             StatusException.class, CommentException.class})
     public ResponseEntity<ErrorMessage> handleMethodArgumentNotValid(Exception exception) {
         log.error("ERROR", exception);
