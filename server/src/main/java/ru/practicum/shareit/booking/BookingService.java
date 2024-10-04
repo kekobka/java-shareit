@@ -12,6 +12,7 @@ import ru.practicum.shareit.exception.AvailabilityException;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.exception.StatusException;
 import ru.practicum.shareit.item.exception.AccessDeniedException;
+import ru.practicum.shareit.item.exception.ItemNotFoundException;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.ItemRepository;
 import ru.practicum.shareit.user.exception.UserNotFoundException;
@@ -108,10 +109,10 @@ public class BookingService {
         log.info("PATCH /bookings/{}", id);
 
         userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("id: " + userId));
+                .orElseThrow(() -> new UserNotFoundException("id: " + userId));
 
         Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Id: " + id));
+                .orElseThrow(() -> new ItemNotFoundException("Id: " + id));
 
         if (booking.getItem().getOwner().getId() != userId) {
             throw new AccessDeniedException("You are not the owner of this item");
