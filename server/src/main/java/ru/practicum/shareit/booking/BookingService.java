@@ -84,7 +84,7 @@ public class BookingService {
     }
 
     @Transactional
-    public Booking create(BookingDto booking, Long userId) {
+    public Booking create(BookingDto booking, long userId) {
         log.info("POST /bookings -> {}", booking);
 
         booking.setBookerId(userId);
@@ -97,8 +97,8 @@ public class BookingService {
 
         User user = findUserById(booking.getBookerId());
 
-        if (Objects.equals(item.getOwner().getId(), userId)) {
-            throw new NotFoundException("Id: " + booking.getItemId());
+        if (item.getOwner().getId() != userId) {
+            throw new AccessDeniedException("cannot be create Id: " + booking.getItemId());
         }
         booking.setStatus(BookingStatus.WAITING);
         return bookingRepository.save(BookingMapper.dtoToBooking(booking, user, item));
