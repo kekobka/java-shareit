@@ -55,7 +55,7 @@ public class ItemService {
         Long requestId = itemDto.getRequestId();
         if (requestId != null) {
             itemRequest = itemRequestRepository.findById(requestId)
-                    .orElseThrow(() -> new NotFoundException("Не найдено запроса предмета с id: " + requestId));
+                    .orElseThrow(() -> new NotFoundException("Id: " + requestId));
         }
         Item item = ItemMapper.dtoToItem(itemDto, user, itemRequest);
 
@@ -85,7 +85,6 @@ public class ItemService {
                     break;
             }
         });
-
 
         return itemRepository.save(item);
     }

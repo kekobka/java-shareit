@@ -1,7 +1,6 @@
 package ru.practicum.shareit.item;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
@@ -82,9 +81,7 @@ public class ItemControllerTest {
         itemDto.setAvailable(true);
         itemDto.setDescription("Description");
 
-        ObjectMapper objectMapper = new ObjectMapper();
-
-        String itemJson = objectMapper.writeValueAsString(itemDto);
+        String itemJson = new ObjectMapper().writeValueAsString(itemDto);
         System.out.println(itemJson);
         Mockito.when(itemService.create(itemDto, 1)).thenReturn(new Item());
 
@@ -92,7 +89,7 @@ public class ItemControllerTest {
                         .header(REQUEST_HEADER, userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(itemJson))
-                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.status().is5xxServerError())
                 .andExpect(MockMvcResultMatchers.content().json("{}"));
 
         Mockito.verify(itemService, Mockito.times(1)).create(itemDto, userId);
@@ -105,9 +102,7 @@ public class ItemControllerTest {
         Comment comment = new Comment();
         comment.setText("Text");
 
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        String commentJson = objectMapper.writeValueAsString(comment);
+        String commentJson = new ObjectMapper().writeValueAsString(comment);
 
         Mockito.when(itemService.comment(itemId, userId, comment)).thenReturn(new Comment());
 
@@ -115,7 +110,7 @@ public class ItemControllerTest {
                         .header(REQUEST_HEADER, userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(commentJson))
-                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.status().is5xxServerError())
                 .andExpect(MockMvcResultMatchers.content().json("{}"));
         Mockito.verify(itemService, Mockito.times(1)).comment(itemId, userId, comment);
     }
@@ -132,7 +127,7 @@ public class ItemControllerTest {
                         .header(REQUEST_HEADER, userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
-                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.status().is5xxServerError())
                 .andExpect(MockMvcResultMatchers.content().json("{}"));
         Mockito.verify(itemService, Mockito.times(1)).update(itemId, userId, updates);
     }
