@@ -97,8 +97,8 @@ public class BookingService {
 
         User user = findUserById(booking.getBookerId());
 
-        if (item.getOwner().getId() != userId) {
-            throw new AccessDeniedException("cannot be create Id: " + booking.getItemId());
+        if (Objects.equals(item.getOwner().getId(), userId)) {
+            throw new AccessDeniedException("Access Denied Id: " + booking.getItemId());
         }
         booking.setStatus(BookingStatus.WAITING);
         return bookingRepository.save(BookingMapper.dtoToBooking(booking, user, item));
