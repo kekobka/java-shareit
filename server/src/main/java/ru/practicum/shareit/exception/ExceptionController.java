@@ -7,12 +7,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import ru.practicum.shareit.booking.exception.BookingNotFoundException;
 import ru.practicum.shareit.item.exception.AccessDeniedException;
 
 @Slf4j
 @RestControllerAdvice
 public class ExceptionController {
-    @ExceptionHandler(NotFoundException.class)
+    @ExceptionHandler({NotFoundException.class, BookingNotFoundException.class})
     public ResponseEntity<ErrorMessage> handleNotFound(NotFoundException exception) {
         log.error("ERROR", exception);
         return ResponseEntity
