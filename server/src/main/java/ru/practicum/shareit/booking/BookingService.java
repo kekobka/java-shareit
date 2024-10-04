@@ -90,7 +90,7 @@ public class BookingService {
         Item item = itemRepository.findById(booking.getItemId())
                 .orElseThrow(() -> new BookingNotFoundException("Id: " + booking.getItemId()));
 
-        if (!item.getAvailable()) {
+        if (!item.isAvailable()) {
             throw new AvailabilityException("This item cannot be booked");
         }
 

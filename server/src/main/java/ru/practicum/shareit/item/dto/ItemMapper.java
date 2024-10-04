@@ -28,7 +28,7 @@ public class ItemMapper {
         itemDto.setId(item.getId());
         itemDto.setName(item.getName());
         itemDto.setDescription(item.getDescription());
-        itemDto.setAvailable(item.getAvailable());
+        itemDto.setAvailable(item.isAvailable());
         return itemDto;
     }
 
@@ -40,7 +40,7 @@ public class ItemMapper {
                 item.getId(),
                 item.getName(),
                 item.getDescription(),
-                item.getAvailable(),
+                item.isAvailable(),
                 itemOwnerId == userId ? lastBooking : null,
                 itemOwnerId == userId ? nextBooking : null,
                 comments

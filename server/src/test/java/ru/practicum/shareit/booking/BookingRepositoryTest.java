@@ -20,9 +20,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import static ru.practicum.shareit.booking.BookingStatus.REJECTED;
-import static ru.practicum.shareit.booking.BookingStatus.WAITING;
-
 @DataJpaTest
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class BookingRepositoryTest {
@@ -45,14 +42,14 @@ public class BookingRepositoryTest {
         newItemRequest.setCreated(Instant.now());
         ItemRequest itemRequest = itemRequestRepository.save(newItemRequest);
 
-        item = createItem("Item", "Description", true, owner, itemRequest);
+        item = createItem(owner, itemRequest);
     }
 
-    private Item createItem(String name, String description, boolean available, User owner, ItemRequest itemRequest) {
+    private Item createItem(User owner, ItemRequest itemRequest) {
         Item item = new Item();
-        item.setName(name);
-        item.setDescription(description);
-        item.setAvailable(available);
+        item.setName("Item");
+        item.setDescription("Description");
+        item.setAvailable(true);
         item.setOwner(owner);
         item.setRequest(itemRequest);
         return itemRepository.save(item);
@@ -134,7 +131,7 @@ public class BookingRepositoryTest {
         Booking booking = createBooking(BookingStatus.WAITING, item, booker, now.plusMinutes(10), now.plusMinutes(15));
 
         List<Booking> result = bookingRepository
-                .findAllByBookerIdAndStatusOrderByStartDesc(booker.getId(), WAITING);
+                .findAllByBookerIdAndStatusOrderByStartDesc(booker.getId(), BookingStatus.WAITING);
         Assertions.assertNotNull(result);
         Assertions.assertEquals(1, result.size());
         Assertions.assertEquals(booking.getId(), result.getFirst().getId());
@@ -148,7 +145,7 @@ public class BookingRepositoryTest {
         Booking booking = createBooking(BookingStatus.REJECTED, item, booker, now.plusMinutes(10), now.plusMinutes(15));
 
         List<Booking> result = bookingRepository
-                .findAllByBookerIdAndStatusOrderByStartDesc(booker.getId(), REJECTED);
+                .findAllByBookerIdAndStatusOrderByStartDesc(booker.getId(), BookingStatus.REJECTED);
         Assertions.assertNotNull(result);
         Assertions.assertEquals(1, result.size());
         Assertions.assertEquals(booking.getId(), result.getFirst().getId());
@@ -219,7 +216,7 @@ public class BookingRepositoryTest {
         Booking booking = createBooking(BookingStatus.WAITING, item, booker, now.plusMinutes(10), now.plusMinutes(15));
 
         List<Booking> result = bookingRepository
-                .findAllByItemOwnerIdAndStatusOrderByStartDesc(owner.getId(), WAITING);
+                .findAllByItemOwnerIdAndStatusOrderByStartDesc(owner.getId(), BookingStatus.WAITING);
         Assertions.assertNotNull(result);
         Assertions.assertEquals(1, result.size());
         Assertions.assertEquals(booking.getId(), result.getFirst().getId());
@@ -233,7 +230,7 @@ public class BookingRepositoryTest {
         Booking booking = createBooking(BookingStatus.REJECTED, item, booker, now.plusMinutes(10), now.plusMinutes(15));
 
         List<Booking> result = bookingRepository
-                .findAllByItemOwnerIdAndStatusOrderByStartDesc(owner.getId(), REJECTED);
+                .findAllByItemOwnerIdAndStatusOrderByStartDesc(owner.getId(), BookingStatus.REJECTED);
         Assertions.assertNotNull(result);
         Assertions.assertEquals(1, result.size());
         Assertions.assertEquals(booking.getId(), result.getFirst().getId());
