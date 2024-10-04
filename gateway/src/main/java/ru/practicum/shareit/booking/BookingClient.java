@@ -18,11 +18,10 @@ public class BookingClient extends BaseClient {
 
     @Autowired
     public BookingClient(@Value("${shareIt-server.url}") String serverUrl, RestTemplateBuilder builder) {
-        super(
-                builder
-                        .uriTemplateHandler(new DefaultUriBuilderFactory(serverUrl + API_PREFIX))
-                        .requestFactory(() -> new HttpComponentsClientHttpRequestFactory())
-                        .build()
+        super(builder
+                .uriTemplateHandler(new DefaultUriBuilderFactory(serverUrl + API_PREFIX))
+                .requestFactory(() -> new HttpComponentsClientHttpRequestFactory())
+                .build()
         );
     }
 
