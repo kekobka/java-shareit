@@ -4,81 +4,69 @@ package ru.practicum.shareit.user;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.user.dto.UserDto;
-import ru.practicum.shareit.user.exception.EmailAlreadyExistException;
+import ru.practicum.shareit.user.dto.UserMapper;
 import ru.practicum.shareit.user.exception.UserNotFoundException;
+import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class UserService {
     private final UserRepository userRepository;
-    private long id = 0;
 
-    public User create(User user) {
+    @Transactional
+    public User create(UserDto user) {
         log.info("POST /users");
 
-        if (isEmailExist(user.getEmail()))
-            throw new EmailAlreadyExistException(user.getEmail());
-
-        user.setId(generateId());
-        return userRepository.create(user);
+        return userRepository.save(UserMapper.dtoToUser(user));
     }
 
     public User getById(long userId) {
         log.info("GET /users/{}", userId);
 
-        return userRepository.getById(userId)
+        return userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Id: " + userId));
     }
 
     public List<User> getAll() {
         log.info("GET /users");
 
-        return userRepository.getAll();
+        return userRepository.findAll();
     }
 
-    public User update(long userId, UserDto userDto) {
+    @Transactional
+    public User update(Long userId, Map<String, Object> params) {
         log.info("PATCH /users/{}", userId);
 
-        User user = userRepository.getById(userId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Id: " + userId));
 
-        if (userDto.getEmail() != null && isEmailExist(userDto.getEmail())) {
-            throw new EmailAlreadyExistException(userDto.getEmail());
-        }
-        User updatedUser = updateUserDetails(user, userDto);
-        userRepository.deleteById(userId, user);
+        params.forEach((key, value) -> {
+            switch (key) {
+                case "name":
+                    user.setName((String) value);
+                    break;
+                case "email":
+                    user.setEmail((String) value);
+                    break;
+            }
+        });
 
-        return userRepository.create(updatedUser);
+        return userRepository.save(user);
     }
 
-    private User updateUserDetails(User user, UserDto userDto) {
-        if (userDto.getName() != null) {
-            user.setName(userDto.getName());
-        }
-        if (userDto.getEmail() != null) {
-            user.setEmail(userDto.getEmail());
-        }
-        return user;
-    }
-
+    @Transactional
     public void deleteById(long userId) {
         log.info("DELETE /users/{}", userId);
 
-        User user = userRepository.getById(userId)
-                .orElseThrow(() -> new UserNotFoundException("Id: " + userId));
-        userRepository.deleteById(userId, user);
+        userRepository.deleteById(userId);
     }
 
-    private boolean isEmailExist(String email) {
-        return userRepository.getEmails().contains(email);
-    }
-
-    private long generateId() {
-        return ++id;
-    }
 }
